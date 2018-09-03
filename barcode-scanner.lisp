@@ -48,20 +48,30 @@
                        (two (cv:get-size frame) cv:+ipl-depth-8u+ 1))
     (cv:cvt-color frame one cv:+rgb-2-gray+)
     
-    (let* ((threshold 60)
+    (let* ((threshold 80)
            (size (cv:get-size frame))
            (height (cv:size-height size))
-           (lines 30))
-      ;;(cv:normalize one two)
-      
-      ;;(cv:adaptive-threshold one two 230 cv:+adaptive-thresh-mean-c+ cv:+thresh-binary+ 3 7)
-      ;;(cv:threshold one two threshold 240 cv:+thresh-binary+)
-      
-      ;;(cv:cvt-color one frame cv:+gray-2-rgb+)
-      (dotimes (i lines)
-        (let* ((bars (read-scan-line one frame (floor (+ (* (/ height (1+ lines)) i) 1)) :threshold threshold))
-               (numbers (convert-bars-to-numbers bars)))
-          (format t "~a ~a~%" bars numbers))))))
+           (lines 30)
+           (kernel (cv:create-mat 5 5 cv:+32FC1+)))
+      (unwind-protect
+           (progn
+             (dotimes (i 5)
+               (dotimes (j 5)
+                 (cv:set-2d kernel i j (cv:scalar -0.1))))
+
+             (cv:set-2d kernel 2 1 (cv:scalar 0.8))
+             (cv:set-2d kernel 2 2 (cv:scalar 1.1))
+             (cv:set-2d kernel 2 3 (cv:scalar 0.8))
+
+             (cv:filter-2d one two kernel)
+
+             (cv:cvt-color two frame cv:+gray-2-rgb+)
+             (dotimes (i lines)
+               (let* ((bars (read-scan-line one frame (floor (+ (* (/ height (1+ lines)) i) 1)) :threshold threshold))
+                      (numbers (convert-bars-to-numbers bars)))
+                 ;; (format t "~a ~a~%" bars numbers)
+                 )))
+        (cv:free kernel)))))
 
 (defmacro with-gui-thread (&body body)
   "Wraps BODY in code which masks float traps.
