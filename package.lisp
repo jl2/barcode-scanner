@@ -5,4 +5,7 @@
 
 (defpackage #:barcode-scanner
   (:use #:cl #:alexandria)
-  (:export #:scan-barcodes))
+  (:export #:with-gui-thread
+           #:scan-barcodes-from-webcam
+           #:scan-barcode-from-file
+           #:scan-barcode-from-image))

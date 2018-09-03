@@ -14,6 +14,9 @@
   :description "Test barcode-scanner."
   :license "ISC"
   :depends-on (:barcode-scanner
+               :common-cv
+               :alexandria
+               :j-utils
                :fiveam)
   :components ((:module "t"
                 :components
