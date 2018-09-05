@@ -41,7 +41,8 @@
                       )
                  (when (null bar-start-x)
                    (setf bar-start-x i)
-                   (setf bar-start-y j))
+                   (setf bar-start-y j)
+                   (cv:set-2d display (max (- j dy) 0) (max (- i dx) 0) (cv:scalar 0 0 255)))
                  (cv:set-2d display j i (cv:scalar 0 0 255)))
                 ((and bar-start-x bar-start-y
                       (> (cv:get-real-2d img j i) threshold))
@@ -64,17 +65,17 @@
                        (two (cv:get-size frame) cv:+ipl-depth-8u+ 1))
     (cv:cvt-color frame one cv:+rgb-2-gray+)
     
-    (let* ((threshold 80)
+    (let* ((threshold 30)
            (kernel (cv:create-mat 5 5 cv:+32FC1+))
            (size (cv:get-size frame))
            (width (cv:size-width size))
            (height (cv:size-height size))
-           (mat #2A(( -0.1 -0.1 -0.1 -0.1 -0.1)
-                    ( 0.01 0.05 0.1 0.05 0.01)
-                    ( 0.1 0.5 1.5 0.5 0.1)
-                    ( 0.01 0.05 0.1 0.05 0.01)
-                    ( -0.1 -0.1 -0.1 -0.1 -0.1)))
-           (lines 25))
+           (mat #2A(( 0.0 0.0 0.0 0.0 0.0)
+                    ( 0.0 1.0 2.0 1.0 0.0)
+                    ( 0.2 0.0 1.0 0.0 0.2)
+                    ( 0.0 -1.0 -2.0 -1.0 -0.0)
+                    ( 0.0 0.0 0.0 0.0 0.0)))
+           (lines 15))
       (declare (ignorable width height))
       (unwind-protect
            (progn
@@ -83,10 +84,11 @@
                  (cv:set-2d kernel i j (cv:scalar (aref mat j i)))))
 
              (cv:filter-2d one two kernel)
-             ;;(cv:cvt-color two frame cv:+gray-2-rgb+)
-
+             ;;(cv:filter-2d two one kernel)
+;;             (cv:threshold two one 20 255 cv:+thresh-binary+)
+             ;; (cv:cvt-color two frame cv:+gray-2-rgb+)
              (let ((horizontal (loop for i below lines collecting
-                                  (read-scan-line one frame 0 (1+ (floor (* i (/ height (1+ lines))))) 1 0 :threshold threshold)))
+                                  (read-scan-line two frame 0 (1+ (floor (* i (/ height (1+ lines))))) 1 0 :threshold threshold)))
                    ;; (vertical (loop for i below 15 collecting
                    ;;                             (read-scan-line one frame (1+ (floor (* i (/ height 21)))) 0 0 1 :threshold threshold)))
                    (vertical nil))
@@ -112,7 +114,7 @@
 (defun scan-barcodes-from-webcam (&key (camera 0) (fps 10))
   (with-gui-thread
     (cv:with-named-window ("bar-code-scanner")
-      (cv:with-captured-camera (vid :width 1920 :height 1080
+      (cv:with-captured-camera (vid :width 800 :height 600
                                     :idx camera)
         (loop
            (let* ((frame (cv:query-frame vid))
@@ -134,12 +136,13 @@
 (defun show-scan-from-file (file-name)
   (with-gui-thread
     (cv:with-named-window ("bar-code-scanner")
-      (let* ((image (cv:load-image file-name))
-             (isbn (read-barcode-from-image image))
-             (fps 30))
-        (cv:show-image "bar-code-scanner" image)
-        (loop
+      (loop
+         (let* ((image (cv:load-image file-name))
+                (isbn (read-barcode-from-image image))
+                (fps 10))
+           (cv:show-image "bar-code-scanner" image)
            (let ((c (cv:wait-key (floor (/ 1000 fps)))))
              (when (or (= c 27) (= c 1048603))
                (format t "Exiting~%")
-               (return isbn))))))))
+               (return isbn)))
+           (cv:release-image image))))))
