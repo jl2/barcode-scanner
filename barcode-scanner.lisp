@@ -5,60 +5,57 @@
 
 (in-package #:barcode-scanner)
 
-(defstruct segment
-  (start-x 0 :type fixnum)
-  (start-y 0 :type fixnum)
-  (end-x 0 :type fixnum)
-  (end-y 0 :type fixnum)
-  (width 0.0 :type double-float))
+(defun rle-scan-line (img start-x start-y dx dy &key (threshold 100))
+  (flet ((get-color (x y)
+           (if (< (cv:get-real-2d img y x)
+                  threshold)
+               :black
+               :white)))
+    (let* ((size (cv:get-size img))
+           (width (cv:size-width size))
+           (height (cv:size-height size))
+           (run-lengths nil))
 
-(defun create-segment (sx sy ex ey)
-  (let* ((dx (- ex sx))
-        (dy (- ey sy))
-        (width (sqrt (+ (* 1.0 dx dx) (* 1.0 dy dy)))))
-    (make-segment :start-x sx
-                  :start-y sy
-                  :end-x ex
-                  :end-y ey
-                  :width width)))
+      (do* ((i (+ start-x dx)
+               (+ i dx))
+            (j (+ start-y dy)
+               (+ j dy))
+
+            (current-length 1
+                            (1+ current-length))
+
+            (prev-color (get-color start-x start-y)
+                        current-color)
+
+            (current-color (get-color i j)
+                           (get-color i j)))
+           ((or (< i 0)
+                (< j 0)
+                (>= i (1- width))
+                (>= j (1- height)))
+            (push (cons (1+ current-length) current-color) run-lengths))
+
+        (when (not (eq current-color prev-color))
+          (push (cons current-length prev-color) run-lengths)
+          (setf current-length 0)))
+
+      (reverse run-lengths))))
 
 (defun read-scan-line (img display start-x start-y dx dy &key (threshold 100))
   (let* ((size (cv:get-size img))
          (width (cv:size-width size))
-         (height (cv:size-height size))
-         (bars nil))
-    (handler-case
-        (do ((bar-start-x nil)
-             (bar-start-y nil)
-             (i start-x)
-             (j start-y))
-            ((or (< i 0)
+         (height (cv:size-height size)))
+    (do ((i start-x (+ i dx))
+         (j start-y (+ j dy)))
+        ((or (< i 0)
              (< j 0)
              (>= i (1- width))
              (>= j (1- height))))
-          (cv:set-2d display j i (cv:scalar 0 255 0))
-          (cond ((and (< (cv:get-real-2d img j i) threshold)
-                      )
-                 (when (null bar-start-x)
-                   (setf bar-start-x i)
-                   (setf bar-start-y j)
-                   (cv:set-2d display (max (- j dy) 0) (max (- i dx) 0) (cv:scalar 0 0 255)))
-                 (cv:set-2d display j i (cv:scalar 0 0 255)))
-                ((and bar-start-x bar-start-y
-                      (> (cv:get-real-2d img j i) threshold))
-                 (push (create-segment bar-start-x bar-start-y i j) bars)
-                 (setf bar-start-x nil)
-                 (setf bar-start-y nil)))
-          (incf i dx)
-          (incf j dy))
-      (error (err) (format t "Error: ~a~%" err)))
-    bars))
-
-(defun convert-bars-to-numbers (gaps)
-  (let ((min-max (loop for gap in gaps minimize (- (car gap) (cdr gap)) into min
-                    maximize (- (car gap) (cdr gap)) into max
-                    finally (return (cons min max)))))
-  min-max))
+      (cond ((< (cv:get-real-2d img j i) threshold)
+             (cv:set-2d display j i (cv:scalar 0 0 255)))
+            (t
+             (cv:set-2d display j i (cv:scalar 0 0 255))))))
+  (rle-scan-line img start-x start-y dx dy :threshold threshold))
 
 (defun read-barcode-from-image (frame)
   (cv:with-ipl-images ((one (cv:get-size frame) cv:+ipl-depth-8u+ 1)
@@ -82,7 +79,6 @@
              (dotimes (i 5)
                (dotimes (j 5)
                  (cv:set-2d kernel i j (cv:scalar (aref mat j i)))))
-
              (cv:filter-2d one two kernel)
              ;;(cv:filter-2d two one kernel)
 ;;             (cv:threshold two one 20 255 cv:+thresh-binary+)
@@ -146,3 +142,18 @@
                (format t "Exiting~%")
                (return isbn)))
            (cv:release-image image))))))
+
+(defun show-test-image ()
+  (with-gui-thread
+    (cv:with-named-window ("bar-code-scanner")
+      (let ((image (cv:create-image (cv:size 8 8) 8 1)))
+        (dotimes (i 8)
+          (cv:set-real-2d image 0 i (if (< i 4) 0 255)))
+        (cv:show-image  "bar-code-scanner" image)
+        (loop
+           (let ((c (cv:wait-key (floor (/ 1000 30)))))
+             (when (or (= c 27) (= c 1048603))
+               (format t "Exiting~%")
+               (return))))
+        (format t "~a~%" (rle-scan-line image 0 0 1 0))
+        (cv:release-image image)))))
