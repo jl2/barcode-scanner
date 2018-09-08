@@ -41,7 +41,20 @@
 
       (reverse run-lengths))))
 
-(defun read-scan-line (img display start-x start-y dx dy &key (threshold 100))
+(defun minimize-rle (rle)
+  (declare (ignorable rle))
+  )
+
+(defun rle-to-number (rle &optional (bits 7))
+  (declare (ignorable rle bits))
+  )
+
+(defun read-and-showscan-line (img display start-x start-y dx dy &key (threshold 100))
+  (show-scan-line img display start-x start-y dx dy threshold)
+  (rle-scan-line img start-x start-y dx dy :threshold threshold))
+
+
+(defun show-scan-line (img display start-x start-y dx dy threshold)
   (let* ((size (cv:get-size img))
          (width (cv:size-width size))
          (height (cv:size-height size)))
@@ -54,14 +67,13 @@
       (cond ((< (cv:get-real-2d img j i) threshold)
              (cv:set-2d display j i (cv:scalar 0 0 255)))
             (t
-             (cv:set-2d display j i (cv:scalar 0 0 255))))))
-  (rle-scan-line img start-x start-y dx dy :threshold threshold))
+             (cv:set-2d display j i (cv:scalar 0 0 255)))))))
 
-(defun read-barcode-from-image (frame)
+(defun read-barcodes-from-image (frame)
   (cv:with-ipl-images ((one (cv:get-size frame) cv:+ipl-depth-8u+ 1)
                        (two (cv:get-size frame) cv:+ipl-depth-8u+ 1))
     (cv:cvt-color frame one cv:+rgb-2-gray+)
-    
+
     (let* ((threshold 30)
            (kernel (cv:create-mat 5 5 cv:+32FC1+))
            (size (cv:get-size frame))
@@ -75,6 +87,7 @@
            (lines 15))
       (declare (ignorable width height))
       (unwind-protect
+           ;; TODO: Since only a few scanlines are used, don't filter the entire image.
            (progn
              (dotimes (i 5)
                (dotimes (j 5)
@@ -114,7 +127,7 @@
                                     :idx camera)
         (loop
            (let* ((frame (cv:query-frame vid))
-                  (isbn (read-barcode-from-image frame)))
+                  (isbn (read-barcodes-from-image frame)))
              (declare (ignorable isbn))
 ;;             (format t "~a~%" isbn)
              (cv:show-image "bar-code-scanner" frame)
@@ -125,7 +138,7 @@
 
 (defun scan-barcode-from-file (file-name)
   (let* ((image (cv:load-image file-name))
-         (isbn (read-barcode-from-image image)))
+         (isbn (read-barcodes-from-image image )))
     (format t "~a~%" isbn)
     isbn))
 
@@ -134,7 +147,7 @@
     (cv:with-named-window ("bar-code-scanner")
       (loop
          (let* ((image (cv:load-image file-name))
-                (isbn (read-barcode-from-image image))
+                (isbn (read-barcodes-from-image image))
                 (fps 10))
            (cv:show-image "bar-code-scanner" image)
            (let ((c (cv:wait-key (floor (/ 1000 fps)))))

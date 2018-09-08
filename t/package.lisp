@@ -40,9 +40,16 @@
 
 
 (test rle
-      (let ((image (cv:create-image (cv:size 8 8) 8 1)))
-        (dotimes (i 8)
-          (cv:set-real-2d image 0 i (if (< i 4) 0 255)))
-        (let ((rle (barcode-scanner:rle-scan-line image 0 0 1 0 :threshold 100)))
-          (is-true (equal '((4 . :black) (4 . :white)) rle)))
-        (cv:release-image image)))
+  (let ((image (cv:create-image (cv:size 8 8) 8 1)))
+    (dotimes (i 8)
+      (cv:set-real-2d image 0 i (if (< i 4) 0 255)))
+    (let ((rle (barcode-scanner:rle-scan-line image 0 0 1 0 :threshold 100)))
+      (is-true (equal '((4 . :black) (4 . :white)) rle)))
+    (dotimes (i 8)
+      (cv:set-real-2d image 1 i (* i 32)))
+    (let ((rle (barcode-scanner:rle-scan-line image 0 1 1 0 :threshold 100)))
+      (format t "~a~%" rle)
+      (is-true (equal '((4 . :black) (4 . :white)) rle)))
+    (cv:release-image image)))
+
+

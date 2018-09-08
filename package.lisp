@@ -12,4 +12,6 @@
            #:rle-scan-line
            #:black #:white
            #:show-test-image
+           #:minimize-rle
+           #:rle-to-number
            ))
