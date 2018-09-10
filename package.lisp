@@ -9,9 +9,8 @@
            #:scan-barcode-from-file
            #:show-scan-from-file
 
-           #:rle-scan-line
-           #:black #:white
+           #:filter-image
+           #:read-scan-line
+
            #:show-test-image
-           #:minimize-rle
-           #:rle-to-number
            ))
