@@ -53,7 +53,7 @@
       (dolist (num numbers)
         (dotimes (i 8)
           (cv:set-real-2d image 0 (- 7 i) (if (= 0 (ldb (byte 1 i) num)) 255 0)))
-        (let ((found (barcode-scanner:read-scan-line image 0 :horizontal :bit-size 8 :bit-width 1)))
+        (let ((found (barcode-scanner:read-scan-line image 0 0 :horizontal :bit-size 8 :bit-width 1)))
           (is (= num (aref found 0)))))
     (cv:release-image image))))
 
@@ -73,7 +73,7 @@
     (cv:set-real-2d image 0 10 0)
     (cv:set-real-2d image 0 11 0)
 
-    (let ((res (barcode-scanner:read-scan-line image 0 :horizontal :bit-size 3 :bit-width 2)))
+    (let ((res (barcode-scanner:read-scan-line image 0 0 :horizontal :bit-size 3 :bit-width 2)))
       (is (= #b101 (aref res 0)))
       (is (= #b001 (aref res 1))))
     (cv:release-image image)))
