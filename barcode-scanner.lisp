@@ -30,12 +30,10 @@
              (unwind-protect
                   (progn
                     (cv:show-image "bar-code-scanner" frame)
-
                     (let ((barcodes (zbar:scan-cv-image frame))
                           (c (cv:wait-key (floor (/ 1000 fps)))))
                       (when barcodes
                         (format t "~a~%" barcodes))
                       (when (or (= c 27) (= c 1048603))
                         (format t "Exiting~%")
-                        (return))))
-               (cv:release-image frame))))))))
+                        (return)))))))))))
