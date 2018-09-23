@@ -9,7 +9,7 @@
   :license  "ISC"
   :version "0.0.1"
   :serial t
-  :depends-on (#:cffi #:common-cv #:alexandria #:j-utils #:trivial-main-thread #:zbar)
+  :depends-on (#:cffi #:common-cv #:alexandria #:j-utils #:trivial-main-thread #:zbar #:png)
   :components ((:file "package")
                (:file "barcode-scanner"))
   :in-order-to ((test-op (test-op :barcode-scanner.test))))

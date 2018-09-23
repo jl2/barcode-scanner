@@ -13,6 +13,6 @@
            #:read-scan-line
 
            #:show-test-image
-
+           #:save-image
            #:zbar
            ))
